@@ -12,5 +12,5 @@ WORKDIR /app
 RUN addgroup -S sudoku && adduser -S sudoku -G sudoku
 COPY --from=builder /app/target/*.jar app.jar
 USER sudoku
-EXPOSE 8080
+EXPOSE 8090
 ENTRYPOINT ["java", "-jar", "app.jar"]
