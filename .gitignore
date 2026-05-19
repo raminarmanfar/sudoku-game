@@ -1,0 +1,48 @@
+# Dependency directories
+node_modules/
+.npm/
+
+# Build outputs
+mobile/www/
+mobile/dist/
+backend/target/
+
+# Android build
+mobile/android/
+mobile/ios/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+*secret*
+*credentials*
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# Docker volumes
+postgres_data/
+
+# Java
+*.class
+*.jar
+!backend/target/*.jar
+
+# Test reports
+backend/target/surefire-reports/
+backend/target/site/
+
+# Capacitor
+mobile/.capacitor/
+
+# Kustomize build output
+k8s/build/
+mobile/.angular/

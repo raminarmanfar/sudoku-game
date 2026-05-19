@@ -1,0 +1,228 @@
+// Sudoku Game — Jenkins Multibranch Pipeline
+// Requires: Docker, kubectl, AWS CLI, ArgoCD CLI on Jenkins agents
+
+def BACKEND_IMAGE  = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/sudoku-backend"
+def FRONTEND_IMAGE = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/sudoku-frontend"
+def IMAGE_TAG      = "${env.GIT_COMMIT[0..7]}"
+
+pipeline {
+    agent {
+        kubernetes {
+            yaml '''
+apiVersion: v1
+kind: Pod
+spec:
+  containers:
+  - name: maven
+    image: maven:3.9-eclipse-temurin-21
+    command: [sleep, infinity]
+    resources:
+      requests:
+        cpu: 500m
+        memory: 1Gi
+  - name: node
+    image: node:20-alpine
+    command: [sleep, infinity]
+    resources:
+      requests:
+        cpu: 250m
+        memory: 512Mi
+  - name: docker
+    image: docker:24-dind
+    securityContext:
+      privileged: true
+    env:
+    - name: DOCKER_TLS_CERTDIR
+      value: ""
+  - name: kubectl
+    image: bitnami/kubectl:latest
+    command: [sleep, infinity]
+'''
+        }
+    }
+
+    environment {
+        AWS_ACCOUNT_ID = credentials('aws-account-id')
+        AWS_REGION     = 'us-east-1'
+        AWS_CREDS      = credentials('aws-ecr-credentials')
+        ARGOCD_TOKEN   = credentials('argocd-token')
+        ARGOCD_SERVER  = 'argocd.your-domain.com'
+    }
+
+    options {
+        buildDiscarder(logRotator(numToKeepStr: '20'))
+        timeout(time: 30, unit: 'MINUTES')
+        disableConcurrentBuilds()
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        // ─── Backend ────────────────────────────────────────────────────
+        stage('Backend: Test') {
+            steps {
+                container('maven') {
+                    dir('backend') {
+                        sh 'mvn test -q'
+                    }
+                }
+            }
+            post {
+                always {
+                    junit 'backend/target/surefire-reports/*.xml'
+                }
+            }
+        }
+
+        stage('Backend: Build JAR') {
+            steps {
+                container('maven') {
+                    dir('backend') {
+                        sh 'mvn package -DskipTests -q'
+                    }
+                }
+            }
+        }
+
+        // ─── Frontend ────────────────────────────────────────────────────
+        stage('Frontend: Install & Build') {
+            steps {
+                container('node') {
+                    dir('mobile') {
+                        sh 'npm ci --legacy-peer-deps'
+                        sh 'npm run build -- --configuration production'
+                    }
+                }
+            }
+        }
+
+        // ─── Docker Build & Push ─────────────────────────────────────────
+        stage('Docker: Login to ECR') {
+            steps {
+                container('docker') {
+                    sh """
+                        aws ecr get-login-password --region ${AWS_REGION} | \
+                        docker login --username AWS --password-stdin \
+                        ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
+                    """
+                }
+            }
+        }
+
+        stage('Docker: Build & Push') {
+            parallel {
+                stage('Backend Image') {
+                    steps {
+                        container('docker') {
+                            dir('backend') {
+                                sh "docker build -t ${BACKEND_IMAGE}:${IMAGE_TAG} ."
+                                sh "docker push ${BACKEND_IMAGE}:${IMAGE_TAG}"
+                            }
+                        }
+                    }
+                }
+                stage('Frontend Image') {
+                    steps {
+                        container('docker') {
+                            dir('mobile') {
+                                sh "docker build -t ${FRONTEND_IMAGE}:${IMAGE_TAG} ."
+                                sh "docker push ${FRONTEND_IMAGE}:${IMAGE_TAG}"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // ─── Update Kustomize image tags ─────────────────────────────────
+        stage('GitOps: Update Image Tags') {
+            when { branch 'develop' }
+            steps {
+                container('kubectl') {
+                    withCredentials([sshUserPrivateKey(credentialsId: 'github-ssh', keyFileVariable: 'SSH_KEY')]) {
+                        sh """
+                            cd k8s/overlays/dev
+                            kustomize edit set image \
+                              ${BACKEND_IMAGE}:${IMAGE_TAG} \
+                              ${FRONTEND_IMAGE}:${IMAGE_TAG}
+                            git config user.email "jenkins@ci"
+                            git config user.name  "Jenkins"
+                            git add kustomization.yaml
+                            git commit -m "ci: update dev image tags to ${IMAGE_TAG}" || true
+                            GIT_SSH_COMMAND='ssh -i $SSH_KEY -o StrictHostKeyChecking=no' git push
+                        """
+                    }
+                }
+            }
+        }
+
+        // ─── ArgoCD Sync ─────────────────────────────────────────────────
+        stage('ArgoCD: Sync Dev') {
+            when { branch 'develop' }
+            steps {
+                sh """
+                    argocd app sync sudoku-dev \
+                      --auth-token ${ARGOCD_TOKEN} \
+                      --server ${ARGOCD_SERVER} \
+                      --grpc-web
+                    argocd app wait sudoku-dev \
+                      --auth-token ${ARGOCD_TOKEN} \
+                      --server ${ARGOCD_SERVER} \
+                      --grpc-web \
+                      --timeout 120
+                """
+            }
+        }
+
+        stage('Promote: Tag as stable') {
+            when { branch 'main' }
+            steps {
+                container('docker') {
+                    sh """
+                        docker pull ${BACKEND_IMAGE}:${IMAGE_TAG}
+                        docker tag  ${BACKEND_IMAGE}:${IMAGE_TAG} ${BACKEND_IMAGE}:stable
+                        docker push ${BACKEND_IMAGE}:stable
+
+                        docker pull ${FRONTEND_IMAGE}:${IMAGE_TAG}
+                        docker tag  ${FRONTEND_IMAGE}:${IMAGE_TAG} ${FRONTEND_IMAGE}:stable
+                        docker push ${FRONTEND_IMAGE}:stable
+                    """
+                }
+            }
+        }
+
+        stage('ArgoCD: Trigger Prod Sync') {
+            when { branch 'main' }
+            steps {
+                input message: 'Deploy to PRODUCTION?', ok: 'Deploy'
+                sh """
+                    argocd app sync sudoku-prod \
+                      --auth-token ${ARGOCD_TOKEN} \
+                      --server ${ARGOCD_SERVER} \
+                      --grpc-web
+                    argocd app wait sudoku-prod \
+                      --auth-token ${ARGOCD_TOKEN} \
+                      --server ${ARGOCD_SERVER} \
+                      --grpc-web \
+                      --timeout 180
+                """
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "Pipeline succeeded for ${env.BRANCH_NAME}:${IMAGE_TAG}"
+        }
+        failure {
+            echo "Pipeline failed — check logs above"
+        }
+        always {
+            cleanWs()
+        }
+    }
+}

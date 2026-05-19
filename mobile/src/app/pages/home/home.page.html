@@ -1,0 +1,70 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-title>Sudoku</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="goToLeaderboard()">
+        <ion-icon slot="icon-only" name="trophy"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <!-- New Game Card -->
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>New Game</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <ion-segment [(ngModel)]="selectedDifficulty">
+        <ion-segment-button *ngFor="let d of difficulties" [value]="d">
+          <ion-label>{{ d | titlecase }}</ion-label>
+        </ion-segment-button>
+      </ion-segment>
+      <ion-button expand="block" size="large" class="ion-margin-top" (click)="newGame()" [disabled]="generating">
+        <ion-spinner *ngIf="generating" name="crescent" slot="start"></ion-spinner>
+        <ion-icon *ngIf="!generating" slot="start" name="play-circle"></ion-icon>
+        {{ generating ? 'Generating…' : 'Start New Game' }}
+      </ion-button>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- Saved Puzzles -->
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>My Puzzles</ion-card-title>
+      <ion-card-subtitle>Tap any puzzle to continue</ion-card-subtitle>
+    </ion-card-header>
+    <ion-card-content>
+      <div *ngIf="loading" class="ion-text-center ion-padding">
+        <ion-spinner></ion-spinner>
+      </div>
+
+      <ng-container *ngIf="!loading">
+        <ng-container *ngFor="let diff of difficulties">
+          <ng-container *ngIf="puzzlesByDifficulty(diff).length > 0">
+            <ion-list-header>
+              <ion-badge [color]="difficultyColor(diff)">{{ diff | titlecase }}</ion-badge>
+            </ion-list-header>
+            <ion-list lines="full">
+              <ion-item *ngFor="let puzzle of puzzlesByDifficulty(diff)" button detail (click)="continueGame(puzzle)">
+                <ion-label>
+                  <h3>Puzzle #{{ puzzle.id }}</h3>
+                  <p>{{ formatDate(puzzle.createdAt) }}</p>
+                </ion-label>
+                <ion-badge slot="end" [color]="difficultyColor(diff)" class="ion-margin-end">{{ diff }}</ion-badge>
+                <ion-button slot="end" fill="clear" color="danger" (click)="deletePuzzle(puzzle, $event)">
+                  <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
+                </ion-button>
+              </ion-item>
+            </ion-list>
+          </ng-container>
+        </ng-container>
+
+        <div *ngIf="puzzles.length === 0" class="ion-text-center ion-padding">
+          <ion-text color="medium">No puzzles yet — start a new game!</ion-text>
+        </div>
+      </ng-container>
+    </ion-card-content>
+  </ion-card>
+</ion-content>

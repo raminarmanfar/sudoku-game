@@ -1,0 +1,31 @@
+ion-content {
+  --background: #1a1a2e;
+}
+
+ion-list {
+  background: transparent;
+}
+
+ion-item {
+  --background: #16213e;
+  --color: white;
+}
+
+.rank {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #e94560;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 0.9rem;
+}
+
+ion-spinner {
+  display: block;
+  margin: 40px auto;
+  color: #e94560;
+}

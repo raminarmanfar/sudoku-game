@@ -1,0 +1,45 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/home"></ion-back-button>
+    </ion-buttons>
+    <ion-title>Leaderboard</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <ion-segment [(ngModel)]="selectedDifficulty" (ionChange)="loadScores()">
+    <ion-segment-button value="">
+      <ion-label>All</ion-label>
+    </ion-segment-button>
+    <ion-segment-button value="easy">
+      <ion-label>Easy</ion-label>
+    </ion-segment-button>
+    <ion-segment-button value="medium">
+      <ion-label>Medium</ion-label>
+    </ion-segment-button>
+    <ion-segment-button value="hard">
+      <ion-label>Hard</ion-label>
+    </ion-segment-button>
+  </ion-segment>
+
+  <ion-list *ngIf="!isLoading" class="ion-margin-top">
+    <ion-item *ngFor="let score of scores; let i = index">
+      <ion-avatar slot="start">
+        <div class="rank">{{ i + 1 }}</div>
+      </ion-avatar>
+      <ion-label>
+        <h2>{{ score.playerName }}</h2>
+        <p>{{ score.difficulty | titlecase }} · {{ formatTime(score.timeSeconds) }}</p>
+      </ion-label>
+      <ion-chip slot="end" [color]="i === 0 ? 'warning' : i === 1 ? 'medium' : 'light'">
+        {{ formatTime(score.timeSeconds) }}
+      </ion-chip>
+    </ion-item>
+    <ion-item *ngIf="scores.length === 0">
+      <ion-label class="ion-text-center">No scores yet. Be the first!</ion-label>
+    </ion-item>
+  </ion-list>
+
+  <ion-spinner *ngIf="isLoading" name="crescent" class="ion-margin"></ion-spinner>
+</ion-content>

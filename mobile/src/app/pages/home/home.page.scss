@@ -1,0 +1,26 @@
+ion-content {
+  --background: #1a1a2e;
+}
+
+.hero {
+  text-align: center;
+  padding: 40px 0 20px;
+  color: white;
+
+  h1 {
+    font-size: 3rem;
+    margin: 0;
+  }
+
+  p {
+    font-size: 1rem;
+    opacity: 0.8;
+  }
+}
+
+.buttons {
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}

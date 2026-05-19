@@ -1,0 +1,28 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: sudoku
+  namespace: argocd
+spec:
+  description: Sudoku Game Project
+  sourceRepos:
+    - 'https://github.com/YOUR_ORG/sudoku'
+  destinations:
+    - namespace: sudoku
+      server: https://kubernetes.default.svc
+  clusterResourceWhitelist:
+    - group: ''
+      kind: Namespace
+  namespaceResourceWhitelist:
+    - group: 'apps'
+      kind: Deployment
+    - group: 'apps'
+      kind: StatefulSet
+    - group: ''
+      kind: Service
+    - group: ''
+      kind: Secret
+    - group: ''
+      kind: ConfigMap
+    - group: 'networking.k8s.io'
+      kind: Ingress

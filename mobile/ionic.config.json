@@ -1,0 +1,7 @@
+{
+  "name": "sudoku",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "angular"
+}

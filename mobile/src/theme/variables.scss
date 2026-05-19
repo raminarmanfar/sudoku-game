@@ -1,0 +1,29 @@
+// Ionic Variables and Theming
+// http://ionicframework.com/docs/theming/
+
+/** Ionic CSS Variables **/
+:root {
+  --ion-color-primary: #e94560;
+  --ion-color-primary-rgb: 233, 69, 96;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: #cd3d55;
+  --ion-color-primary-tint: #eb5870;
+
+  --ion-color-secondary: #0f3460;
+  --ion-color-secondary-rgb: 15, 52, 96;
+  --ion-color-secondary-contrast: #ffffff;
+  --ion-color-secondary-contrast-rgb: 255, 255, 255;
+  --ion-color-secondary-shade: #0d2e54;
+  --ion-color-secondary-tint: #274870;
+
+  --ion-background-color: #1a1a2e;
+  --ion-background-color-rgb: 26, 26, 46;
+
+  --ion-text-color: #ffffff;
+  --ion-text-color-rgb: 255, 255, 255;
+
+  --ion-toolbar-background: #16213e;
+  --ion-item-background: #16213e;
+  --ion-card-background: #16213e;
+}

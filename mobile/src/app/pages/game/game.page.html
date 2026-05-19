@@ -1,0 +1,58 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/home"></ion-back-button>
+    </ion-buttons>
+    <ion-title>{{ difficulty | titlecase }}</ion-title>
+    <ion-buttons slot="end">
+      <ion-chip color="light">
+        <ion-icon name="timer-outline"></ion-icon>
+        <ion-label>{{ formatTime(elapsedSeconds) }}</ion-label>
+      </ion-chip>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <div class="sudoku-board">
+    <div
+      *ngFor="let row of board; let ri = index"
+      class="board-row"
+      [class.box-border-row]="ri % 3 === 0 && ri !== 0"
+    >
+      <div
+        *ngFor="let cell of row; let ci = index"
+        class="cell"
+        [class.fixed]="cell.fixed"
+        [class.error]="cell.error"
+        [class.selected]="cell.selected && !cell.fixed"
+        [class.fixed-selected]="cell.selected && cell.fixed"
+        [class.highlighted]="!cell.selected && (ri === selectedRow || ci === selectedCol) && selectedRow >= 0"
+        [class.same-value]="!cell.selected && selectedValue !== 0 && cell.value === selectedValue"
+        [class.box-border-col]="ci % 3 === 0 && ci !== 0"
+        (click)="selectCell(ri, ci)"
+      >
+        {{ cell.value !== 0 ? cell.value : '' }}
+      </div>
+    </div>
+  </div>
+
+  <div class="number-pad">
+    <ion-button
+      *ngFor="let num of numbers"
+      fill="outline"
+      [disabled]="isFixedSelected || selectedRow < 0"
+      (click)="inputNumber(num)"
+    >{{ num }}</ion-button>
+    <ion-button fill="clear" color="danger"
+      [disabled]="isFixedSelected || selectedRow < 0"
+      (click)="clearCell()">
+      <ion-icon name="backspace-outline"></ion-icon>
+    </ion-button>
+  </div>
+
+  <ion-button expand="block" fill="outline" (click)="loadPuzzle()" class="ion-margin-top">
+    <ion-icon slot="start" name="grid-outline"></ion-icon>
+    My Puzzles
+  </ion-button>
+</ion-content>
